@@ -1,0 +1,41 @@
+[build-system]
+requires = [
+    "setuptools>=61.0.0",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gstreasy"
+version = "0.1.0"
+description = "Makes using GStreamer in python easy!"
+readme = "README.md"
+authors = [{name = "Dan Davis", email = "dan@dandavis.dev"}]
+license = { text = "Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+]
+keywords = []
+dependencies = [
+    "attrs",
+    "numpy",
+    "PyGObject"
+]
+requires-python = ">=3.7"
+
+[project.optional-dependencies]
+dev = ["black", "flake8", "flake8-isort", "flake8-docstrings", "mypy", "pytest"]
+doc = ["pdoc"]
+
+[project.urls]
+Homepage = "https://github.com/danofsteel32/gstools"
+
+[tool.isort]
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
