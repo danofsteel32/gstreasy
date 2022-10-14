@@ -100,7 +100,7 @@ tests() {
 }
 
 default() {
-    wrapped_python -m gstools.pipe "$@"
+    wrapped_python user_code.py
 }
 
 TIMEFORMAT="Task completed in %3lR"
