@@ -32,7 +32,8 @@ def test_appsink_buffers():
 def test_tee():
     num_buffers, count = 10, 0
     out = Path("/tmp/recording.avi")
-    out.unlink(missing_ok=True)
+    if out.exists():
+        out.unlink()
     cmd = f"""
         videotestsrc num-buffers={num_buffers} ! tee name=t
         t. ! queue ! video/x-raw,format=RGB,framerate=60/1
@@ -49,7 +50,8 @@ def test_tee():
                 count += 1
     # Did we get at least 90% of the buffers?
     assert count == num_buffers
-    out.unlink()
+    if out.exists():
+        out.unlink()
 
 
 def test_appsrc_with_caps():

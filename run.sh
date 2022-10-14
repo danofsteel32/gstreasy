@@ -95,7 +95,8 @@ lint() {
 }
 
 tests() {
-    wrapped_python -m pytest -rP tests/
+    wrapped_python -m tox
+    # wrapped_python -m pytest -rP tests/
 }
 
 default() {

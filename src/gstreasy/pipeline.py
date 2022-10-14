@@ -1,6 +1,4 @@
-"""This module provides the GstPipeline class.
-
-"""
+"""This module provides the GstPipeline class."""
 
 import logging
 import queue
@@ -21,6 +19,8 @@ gi.require_version("GstVideo", "1.0")
 from gi.repository import GLib, GObject, Gst, GstApp  # noqa: E402
 
 Gst.init(sys.argv)
+
+Framerate = typing.Union[int, Fraction, str]
 
 
 class AppSink:
@@ -43,14 +43,14 @@ class AppSink:
         """
         self.sink = sink
         self.sink.connect("new-sample", self._on_buffer, None)
-        self.queue: queue.Queue | LeakyQueue
+        self.queue: typing.Union[queue.Queue, LeakyQueue]
         self.queue = LeakyQueue(qsize) if leaky else queue.Queue(qsize)
-        self._caps: WrappedCaps | None = None
+        self._caps: typing.Optional[WrappedCaps] = None
         self._log = logging.getLogger("AppSink")
         self._log.addHandler(logging.NullHandler())
 
     @property
-    def caps(self) -> WrappedCaps | None:
+    def caps(self) -> typing.Optional[WrappedCaps]:
         """`WrappedCaps` being used to map `Gst.Buffer`'s to `np.ndarray.`'s."""
         if self._caps:
             return self._caps
@@ -73,7 +73,7 @@ class AppSink:
         self.queue.put(self._extract_buffer(sample))
         return Gst.FlowReturn.OK
 
-    def _extract_buffer(self, sample: Gst.Sample) -> GstBuffer | None:
+    def _extract_buffer(self, sample: Gst.Sample) -> typing.Optional[GstBuffer]:
         buffer = sample.get_buffer()
         if not self._caps:
             self._log.debug("Getting caps from first sample")
@@ -113,26 +113,26 @@ class AppSrc:
             src (GstApp.AppSrc): the appsrc element.
         """
         self.src = src
-        self._caps: Gst.Caps | None = src.get_caps()
+        self._caps: typing.Optional[Gst.Caps] = src.get_caps()
 
-        self.pts: int | float = 0
+        self.pts: typing.Union[int, float] = 0
         self.dts: int = GLib.MAXUINT64
 
         self.log = logging.getLogger("AppSrc")
         self.log.addHandler(logging.NullHandler())
 
-        self._duration: int | float = 0
+        self._duration: typing.Union[int, float] = 0
 
     @property
-    def duration(self) -> int | float:
-        # FIXME docs
+    def duration(self) -> typing.Union[int, float]:
+        """This is not well understood."""
         if not self._duration:
             self._duration = self._calc_duration()
         return self._duration
 
-    def _calc_duration(self) -> int | float:
+    def _calc_duration(self) -> typing.Union[int, float]:
         """Return duration estimate based on the framerate of the src Caps."""
-        duration: int | float = 0
+        duration: typing.Union[int, float] = 0
         if not self.caps:
             return duration
         caps_string = self.caps.to_string()
@@ -143,7 +143,7 @@ class AppSrc:
         return duration
 
     @property
-    def caps(self) -> Gst.Caps | None:
+    def caps(self) -> typing.Optional[Gst.Caps]:
         """Return the `Gst.Caps` being set on pushed samples."""
         return self._caps
 
@@ -190,15 +190,15 @@ class GstPipeline:
         self.command: str = command
         """A pipeline definition that can be run by gst-launch-1.0"""
 
-        self.pipeline: Gst.Pipeline | None = None
+        self.pipeline: typing.Optional[Gst.Pipeline] = None
         """The actual Pipeline created by calling
             [`Gst.parse_launch`](https://lazka.github.io/pgi-docs/index.html#Gst-1.0/functions.html#Gst.parse_launch)
             on the provided `command`. Defaults to `None`."""
 
-        self.bus: Gst.Bus | None = None
+        self.bus: typing.Optional[Gst.Bus] = None
         """The message bus attached to `pipeline`. Defaults to `None`."""
 
-        self.elements: list[Gst.Element] | None = None
+        self.elements: typing.List[Gst.Element] = []
         """A list of all `Gst.Element`'s in the `pipeline`."""
 
         self._main_loop = GLib.MainLoop.new(None, is_running=False)
@@ -207,10 +207,10 @@ class GstPipeline:
         )
         self._end_stream_event = threading.Event()
 
-        self._appsink: AppSink | None = None
+        self._appsink: typing.Optional[AppSink] = None
         self._appsink_setup: bool = False
 
-        self._appsrc: AppSrc | None = None
+        self._appsrc: typing.Optional[AppSrc] = None
         self._appsrc_setup: bool = False
 
         self._log = logging.getLogger("GstPipeline")
@@ -259,7 +259,7 @@ class GstPipeline:
                 out.append(elem)
         return out
 
-    def get_by_cls(self, cls: GObject.GType) -> list[Gst.Element]:
+    def get_by_cls(self, cls: GObject.GType) -> typing.List[Gst.Element]:
         """Return a `list[Gst.Element]` of all matching pipeline elements.
 
         Args:
@@ -270,7 +270,7 @@ class GstPipeline:
             return []
         return [e for e in self.elements if isinstance(e, cls)]
 
-    def get_by_name(self, name: str) -> Gst.Element | None:
+    def get_by_name(self, name: str) -> typing.Optional[Gst.Element]:
         """Return Gst.Element from pipeline by name lookup.
 
         Args:
@@ -382,12 +382,12 @@ class GstPipeline:
         return self._end_stream_event.is_set()
 
     @property
-    def appsink(self) -> AppSink | None:
+    def appsink(self) -> typing.Optional[AppSink]:
         """Return appsink if configured or None."""
         return self._appsink
 
     @property
-    def appsrc(self) -> AppSrc | None:
+    def appsrc(self) -> typing.Optional[AppSrc]:
         """Return appsrc if configured or None."""
         return self._appsrc
 
@@ -417,13 +417,13 @@ class GstPipeline:
         self._log.debug("Successfully setup AppSink")
         return True
 
-    def pop(self, timeout: float = 0.1) -> GstBuffer | None:
+    def pop(self, timeout: float = 0.1) -> typing.Optional[GstBuffer]:
         """Return a `GstBuffer` from the `appsink` queue."""
         if not self._appsink:
             self._log.warning("No appsink to pop from")
             raise RuntimeError
 
-        buf: GstBuffer | None = None
+        buf: typing.Optional[GstBuffer] = None
         while (self.is_active or not self._appsink.queue.empty()) and not buf:
             try:
                 buf = self._appsink.queue.get(timeout=timeout)
@@ -436,7 +436,7 @@ class GstPipeline:
         *,
         width: int,
         height: int,
-        framerate: int | Fraction | str,
+        framerate: Framerate,
         format: str,
     ) -> bool:
         """Set appsrc caps if not already set.
