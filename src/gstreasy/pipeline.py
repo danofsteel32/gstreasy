@@ -64,6 +64,7 @@ class AppSink:
         return self._caps
 
     def _on_buffer(self, sink: GstApp.AppSink, data: typing.Any) -> Gst.FlowReturn:
+        """Callback for 'new-sample' signal."""
         sample = sink.emit("pull-sample")
         if not sample:
             self._log.error("Bad sample: type = %s" % type(sample))
@@ -82,6 +83,7 @@ class AppSink:
             except AttributeError:
                 return None
 
+        # Use the cached Caps so don't have to re-calc every sample
         if self._caps:
             array = gst_buffer_to_ndarray(buffer, self._caps)
             return GstBuffer(
@@ -168,18 +170,14 @@ class AppSrc:
 class GstPipeline:
     """A Simple and efficient interface for running GStreamer Pipelines.
 
-    Designed to be used as a ContextManager, GstPipeline takes care the setup
-    and teardown of the GLib.MainLoop thread to handle the event bus. If an
-    appsink (`GstApp.AppSink`) element is present in the provided command it
-    will automatically be configured to map each pulled sample's buffer to
-    a `GstBuffer` object where the buffer data is stored as a `np.ndarray`.
-    The `GstBuffer`'s are kept in a `Queue` and can be retrieved by calling
-    the `pop` method.
+    Designed to be used as a ContextManager, GstPipeline takes care of the setup
+    and teardown of the GLib.MainLoop thread to handle messages from the event bus.
+    Any appsink or appsrc elements present in the provided command are automatically
+    configured. You can `pull` buffers from an `appsink` and `push` buffers to
+    an `appsrc`.
 
-    You can `pull` buffers from an `appsink` and `push` buffers to an `appsrc`.
-
-    The attributes `pipeline`, `bus`, and `elements` are uninitialized
-    until `startup` is called.
+    The attributes `pipeline`, `bus`, and `elements` are uninitialized until
+    `startup` is called manually are upon entering the context manager.
     """
 
     def __init__(
@@ -218,8 +216,8 @@ class GstPipeline:
 
     def __bool__(self) -> bool:
         """Return whether or not pipeline is active or there are buffers to process."""
-        if self._appsink:
-            return not self.is_done or self._appsink.queue_size > 0
+        if self.appsink:
+            return not self.is_done or self.appsink.queue_size > 0
         return not self.is_done
 
     def __str__(self) -> str:
@@ -367,7 +365,6 @@ class GstPipeline:
         if not self._appsink_setup:
             self._appsink_setup = self.setup_appsink()
 
-        # self._configure_appsrc()
         self.pipeline.set_state(Gst.State.PLAYING)
         self._log.debug("Set pipeline to PLAYING")
 
@@ -510,7 +507,7 @@ class GstPipeline:
     def on_element(self, bus: Gst.Bus, msg: Gst.Message):
         """Log `ELEMENT` messages.
 
-        Typically you would override this method to handle a specific set of elements.
+        Typically you would override this method.
         """
         msg_struct = msg.get_structure()
         name = msg_struct.get_name()
@@ -524,7 +521,3 @@ class GstPipeline:
         """
         old, new, pending = msg.parse_state_changed()
         self._log.debug("State changed from %s -> %s" % (old, new))
-
-
-if __name__ == "__main__":
-    pass

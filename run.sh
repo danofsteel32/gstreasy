@@ -72,7 +72,7 @@ mkdocs() {
 }
 
 docs() {
-    wrapped_python -m pdoc -d google src/gstreasy
+    wrapped_python -m pdoc -n -d google src/gstreasy
 }
 
 clean() {

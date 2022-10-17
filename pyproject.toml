@@ -27,11 +27,19 @@ dependencies = [
 requires-python = ">=3.7"
 
 [project.optional-dependencies]
-dev = ["black", "flake8", "flake8-isort", "flake8-docstrings", "mypy", "pytest"]
+dev = [
+    "black",
+    "flake8", 
+    "flake8-isort",
+    "flake8-docstrings",
+    "mypy",
+    "pytest",
+    "tox"
+]
 doc = ["pdoc"]
 
 [project.urls]
-Homepage = "https://github.com/danofsteel32/gstools"
+Homepage = "https://github.com/danofsteel32/gstreasy"
 
 [tool.isort]
 line_length = 88

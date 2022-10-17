@@ -1,29 +1,17 @@
-# gstreasy
 
 A re-imagining of [gstreamer-python](https://github.com/jackersson/gstreamer-python).
+I was going to just work on a fork of that repo but there was so much I thought
+should be changed. Some of the new features:
 
-### TODO
-- cleanup docs
-- publish on PyPI
-
-### Goals
-- Easier installation (PyPI)
-- Dependency install scripts for `apt` and `dnf` distros
-- Better support for pipelines with `tee` elements
-- Optimised hot paths and caching for performance
-- Auto detection of Caps
-- Optional use of the GstContext
-    - Use if you want to run multiple pipelines
-    - Auto enter/exit if only running one pipeline
-- Detailed documentation
-- Easy assign callbacks on the message bus
-- Examples/Recipes/Preconfigured pipelines for common tasks
-    - Splitmuxsink with callbacks
-    - Live stream webcam to browser
-    - AppSink and record
+- Auto detect caps if in gst-launch command
+- Auto detect and configure `appsink` and `appsrc` if in command
+- Support for `appsink` and `appsrc` in same pipeline
+- Faster `Gst.Sample` -> `ndarray`
 
 
 ####  Example Usage
+
+Also check out the `user_code.py` script for an `appsrc` example.
 
 ##### Simple pipeline without an `appsink` element:
 
@@ -58,13 +46,14 @@ tee_cmd = '''
 with GstPipeline(tee_cmd) as pipeline:
     while pipeline:
         buffer = pipeline.pop()
+        # do whatever you want with the buffer's ndarray
     # Meanwhile recording.mp4 is being written
 ```
 
 ### Develop
 
-All dev tasks can be handled with the `run.sh` script but it just
-wraps standard tools if you can't use it.
+All dev tasks can be handled with the `run.sh` script but it just wraps standard
+tools if you can't/don't want use it.
 
 - `python -m pip install -e .[dev,doc]` to install deps
 - `tox` to run tests for py3.7 and py3.10.
