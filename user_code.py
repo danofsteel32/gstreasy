@@ -35,7 +35,7 @@ COLORS = {
 
 
 def press_cycle_gen(
-    shape: tuple[int, int, int],
+    shape: tuple = [int, int, int],
     fps: int = 30,
     crash_cycle: int = 1,
     color: str = "white",
