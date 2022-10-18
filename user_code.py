@@ -7,6 +7,7 @@ at ~30 fps and are a crude simulation of a running industrial stamping press.
 """
 
 import logging
+import typing
 
 import numpy as np
 
@@ -35,7 +36,7 @@ COLORS = {
 
 
 def press_cycle_gen(
-    shape: tuple = [int, int, int],
+    shape: typing.Tuple[int, int, int],
     fps: int = 30,
     crash_cycle: int = 1,
     color: str = "white",
