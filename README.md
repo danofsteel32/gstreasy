@@ -11,6 +11,8 @@ should be changed. Some of the new features:
 
 ####  Example Usage
 
+Install with: `python -m pip install gstreasy`
+
 Also check out the `user_code.py` script for an `appsrc` example.
 
 ##### Simple pipeline without an `appsink` element:
@@ -52,8 +54,7 @@ with GstPipeline(tee_cmd) as pipeline:
 
 ### Develop
 
-All dev tasks can be handled with the `run.sh` script but it just wraps standard
-tools if you can't/don't want use it.
+All dev tasks can be handled with the `run.sh` script but it just wraps standard tools if you can't/don't want use it.
 
 - `python -m pip install -e .[dev,doc]` to install deps
 - `tox` to run tests for py3.7 and py3.10.
