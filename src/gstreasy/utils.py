@@ -23,7 +23,7 @@ Framerate = typing.Union[int, Fraction, str]
 
 @attrs.define(slots=True, frozen=True)
 class WrappedCaps:
-    """Wrap `Gst.Caps` to make common transformations easier."""
+    """Wrap `Gst.Caps` to simplify pushing/pulling samples."""
 
     width: int
     height: int
@@ -139,8 +139,6 @@ def _format_channels() -> typing.Dict[GstVideo.VideoFormat, int]:
     for fmt in all_formats:
         channels = _get_num_channels(fmt)
         format_channels[fmt] = channels
-        # if channels > 0:
-        #     format_channels[fmt] = fmt
     return format_channels
 
 
@@ -158,11 +156,13 @@ def _get_np_dtype(fmt: GstVideo.VideoFormat) -> np.dtype:
 
 
 @contextmanager
-def map_gst_buffer(buf: Gst.Buffer, flags: Gst.MapFlags) -> Gst.MapInfo:
+def map_gst_buffer(buf: Gst.Buffer, flags: Gst.MapFlags):
     """Map Gst.Buffer with READ or WRITE flags."""
     try:
         mapped, map_info = buf.map(flags)
-        yield map_info.data
+        # FIXME figure out what should happend if !mapped
+        if mapped:
+            yield map_info
     finally:
         buf.unmap(map_info)
 
@@ -176,7 +176,7 @@ def gst_buffer_to_ndarray(buf: Gst.Buffer, caps: WrappedCaps) -> np.ndarray:
     """Return ndarray extracted from Gst.Buffer."""
     arr: np.ndarray
     with map_gst_buffer(buf, Gst.MapFlags.READ) as mapped:
-        arr = np.ndarray(caps.shape, buffer=mapped, dtype=caps.dtype)
+        arr = np.ndarray(caps.shape, buffer=mapped.data, dtype=caps.dtype)
     if caps.channels > 0:
         return arr.squeeze()
     return arr

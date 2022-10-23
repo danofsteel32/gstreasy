@@ -76,6 +76,7 @@ def test_appsrc_no_caps():
         while pipeline:
             pipeline.push(rand_array(channels=1))
 
+
 def test_appsrc_and_sink():
     num_buffers, count = 10, 0
 

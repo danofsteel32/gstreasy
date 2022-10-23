@@ -61,7 +61,7 @@ build() {
 }
 
 publish() {
-    lint && test && clean && build
+    lint && tests && clean && build
     python -m twine upload dist/*
 }
 
@@ -95,8 +95,8 @@ lint() {
 }
 
 tests() {
-    wrapped_python -m tox
-    # wrapped_python -m pytest -rP tests/
+    # wrapped_python -m tox -p 2
+    wrapped_python -m pytest -rA tests/
 }
 
 default() {

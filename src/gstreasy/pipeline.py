@@ -76,6 +76,8 @@ class AppSink:
 
     def _extract_buffer(self, sample: Gst.Sample) -> typing.Optional[GstBuffer]:
         buffer = sample.get_buffer()
+
+        # Extract the width and height info from the sample's caps
         if not self._caps:
             self._log.debug("Getting caps from first sample")
             try:
@@ -183,10 +185,21 @@ class GstPipeline:
     def __init__(
         self,
         command: str,
+        leaky: bool = False,
+        qsize: int = 100,
     ):
-        """Create a GstPipeline instance but don't start it yet."""
-        self.command: str = command
-        """A pipeline definition that can be run by gst-launch-1.0"""
+        """Create a `GstPipeline` but don't start it yet.
+
+        Args:
+            command (str): A pipeline definition that can be run by gst-launch-1.0.
+            leaky (bool): Whether the appsink should put buffers in a
+                leaky Queue (oldest buffers dropped if full) or a
+                normal Queue (block on `Queue.put` if full).
+            qsize (int): Max number of buffers to keep in the Queue.
+        """
+        self.command = command
+        self.leaky = leaky
+        self.qsize = qsize
 
         self.pipeline: typing.Optional[Gst.Pipeline] = None
         """The actual Pipeline created by calling
@@ -206,10 +219,7 @@ class GstPipeline:
         self._end_stream_event = threading.Event()
 
         self._appsink: typing.Optional[AppSink] = None
-        self._appsink_setup: bool = False
-
         self._appsrc: typing.Optional[AppSrc] = None
-        self._appsrc_setup: bool = False
 
         self._log = logging.getLogger("GstPipeline")
         self._log.addHandler(logging.NullHandler())
@@ -359,11 +369,15 @@ class GstPipeline:
         self.pipeline.set_state(Gst.State.PAUSED)
         self._log.debug("Set pipeline to PAUSED")
 
-        if not self._appsrc_setup:
-            self._appsrc_setup = self.setup_appsrc()
+        self._log.debug("Setting up AppSink ...")
+        self._appsink = self._setup_appsink()
+        if self._appsink:
+            self._log.debug("AppSink successfully setup")
 
-        if not self._appsink_setup:
-            self._appsink_setup = self.setup_appsink()
+        self._log.debug("Setting up AppSrc ...")
+        self._appsrc = self._setup_appsrc()
+        if self._appsrc:
+            self._log.debug("AppSrc successfully setup")
 
         self.pipeline.set_state(Gst.State.PLAYING)
         self._log.debug("Set pipeline to PLAYING")
@@ -388,44 +402,35 @@ class GstPipeline:
         """Return appsrc if configured or None."""
         return self._appsrc
 
-    def setup_appsink(self, leaky: bool = False, qsize: int = 100) -> bool:
-        """Initialize _AppSink helper class if there's an appsink element in pipeline.
+    def _setup_appsink(self) -> typing.Optional[AppSink]:
+        """Initialize `AppSink` helper class if an appsink element in pipeline.
 
-        Args:
-            leaky (bool, optional): Whether the appsink should put buffers in
-                a leaky Queue (oldest buffers dropped if full) or a normal Queue
-                (block on `Queue.put` if full). Defaults to False.
-            qsize: (int, optional): The maxsize of the appsink queue. Defaults to 100
         Returns:
-            bool: Whether the appsink was setup.
+            A configured `AppSink` or None.
         """
-        # bail early if already setup
-        if self._appsink_setup:
-            self._log.warning("Appsink already setup")
-            return True
         try:
             appsink_element = self.get_by_cls(GstApp.AppSink)[0]
             self._log.debug("appsink element detected")
         except IndexError:
             self._log.debug("No appsink element to setup")
-            return False
-        self._log.debug("Setting up AppSink ...")
-        self._appsink = AppSink(appsink_element, leaky, qsize)
-        self._log.debug("Successfully setup AppSink")
-        return True
+            return None
+        return AppSink(appsink_element, self.leaky, self.qsize)
 
     def pop(self, timeout: float = 0.1) -> typing.Optional[GstBuffer]:
         """Return a `GstBuffer` from the `appsink` queue."""
-        if not self._appsink:
+        if not self.appsink:
             self._log.warning("No appsink to pop from")
             raise RuntimeError
 
         buf: typing.Optional[GstBuffer] = None
-        while (self.is_active or not self._appsink.queue.empty()) and not buf:
+        while (self.is_active or not self.appsink.queue.empty()) and not buf:
             try:
-                buf = self._appsink.queue.get(timeout=timeout)
+                buf = self.appsink.queue.get(timeout=timeout)
             except queue.Empty:
                 pass
+            except KeyboardInterrupt:
+                self._log.debug("I'm interrupted!")
+                self._shutdown_pipeline()
         return buf
 
     def set_appsrc_caps(
@@ -449,44 +454,39 @@ class GstPipeline:
         Raises:
             ValueError: If Gst.Caps cannot be created from arguments
         """
-        if not self._appsrc:
+        if not self.appsrc:
             self._log.warning("No appsrc element")
             return False
-        if self._appsrc.caps:
+        if self.appsrc.caps:
             self._log.warning("Caps already set")
             return False
 
         self._log.debug("Building caps from args ...")
-        self._appsrc.caps = make_caps(width, height, framerate, format)
+        self.appsrc.caps = make_caps(width, height, framerate, format)
         self._log.debug("Caps successfully set")
         return True
 
-    def setup_appsrc(self) -> bool:
-        """Initialize _AppSrc helper class if there's an appsrc element in pipeline.
+    def _setup_appsrc(self) -> typing.Optional[AppSrc]:
+        """Initialize `AppSrc` helper class if an appsrc element in pipeline.
 
         Returns:
-            bool: Whether setup was successful
+            Configured `AppSrc` or None.
         """
-        if self._appsrc_setup:
-            self._log.warning("Appsource already setup")
-            return True
         try:
             appsrc_element = self.get_by_cls(GstApp.AppSrc)[0]
         except IndexError:
             self._log.debug("No appsrc element to setup")
-            return False
-
+            return None
         appsrc_element.set_property("format", Gst.Format.TIME)
         appsrc_element.set_property("block", True)
-        self._appsrc = AppSrc(appsrc_element)
-        return True
+        return AppSrc(appsrc_element)
 
     def push(self, data: np.ndarray):
-        """Map the ndarray to a Gst.Sample and push it into the pipeline."""
-        if not self._appsrc:
+        """Create a `Gst.Sample` from the `ndarray` and push it into the pipeline."""
+        if not self.appsrc:
             self._log.warning("No appsrc to push to")
             raise RuntimeError
-        self._appsrc.push(data)
+        self.appsrc.push(data)
 
     def on_error(self, bus: Gst.Bus, msg: Gst.Message):
         """Log `ERROR` message and shutdown."""
