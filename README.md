@@ -14,6 +14,7 @@ should be changed. Some of the new features:
 Install with: `python -m pip install gstreasy`
 
 Also check out the `user_code.py` script for an `appsrc` example.
+As I write more examples they will appear in the `examples/` folder.
 
 ##### Simple pipeline without an `appsink` element:
 
