@@ -122,8 +122,8 @@ class AppSrc:
         self.pts: typing.Union[int, float] = 0
         self.dts: int = GLib.MAXUINT64
 
-        self.log = logging.getLogger("AppSrc")
-        self.log.addHandler(logging.NullHandler())
+        self._log = logging.getLogger("AppSrc")
+        self._log.addHandler(logging.NullHandler())
 
         self._duration: typing.Union[int, float] = 0
 
@@ -165,7 +165,7 @@ class AppSrc:
         gst_buffer.offset = offset
         gst_buffer.duration = self.duration
         sample = Gst.Sample.new(buffer=gst_buffer, caps=self.caps)
-        self.log.debug("Push Sample")
+        self._log.debug("Push Sample")
         self.src.emit("push-sample", sample)
 
 
@@ -447,12 +447,12 @@ class GstPipeline:
             width (int): a positive integer corresponding to buffer width
             height (int): a positive integer corresponding to buffer height
             framerate (int, Fraction, str): A positive integer, `fractions.Fraction`,
-                or string that can be mapped to a Fraction.
-                Ex. 1 -> 10/1, "25/1" -> Fraction(25, 1)
+                or string that can be understood as a Fraction.
+                Ex. 1 -> 10/1, "25/1" -> `Fraction(25, 1)`
             format (str): A string that can be mapped to a `GstVideo.VideoFormat`.
                 Ex. "RGB", "GRAY8", "I420"
         Raises:
-            ValueError: If Gst.Caps cannot be created from arguments
+            ValueError: If `Gst.Caps` cannot be created from arguments
         """
         if not self.appsrc:
             self._log.warning("No appsrc element")
@@ -484,8 +484,9 @@ class GstPipeline:
     def push(self, data: np.ndarray):
         """Create a `Gst.Sample` from the `ndarray` and push it into the pipeline."""
         if not self.appsrc:
-            self._log.warning("No appsrc to push to")
-            raise RuntimeError
+            self._log.error("No appsrc to push to!")
+            self.shutdown()
+            return
         self.appsrc.push(data)
 
     def on_error(self, bus: Gst.Bus, msg: Gst.Message):

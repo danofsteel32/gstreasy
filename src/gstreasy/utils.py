@@ -160,7 +160,7 @@ def map_gst_buffer(buf: Gst.Buffer, flags: Gst.MapFlags):
     """Map Gst.Buffer with READ or WRITE flags."""
     try:
         mapped, map_info = buf.map(flags)
-        # FIXME figure out what should happend if !mapped
+        # FIXME figure out what should happen if !mapped
         if mapped:
             yield map_info
     finally:
