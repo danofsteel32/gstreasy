@@ -42,8 +42,8 @@ class LeakyQueue(queue.Queue):
     """
 
     def __init__(
-            self,
-            maxsize: int = 100,
+        self,
+        maxsize: int = 100,
     ):
         """Initialize the Queue."""
         super().__init__(maxsize=maxsize)
@@ -58,7 +58,7 @@ class LeakyQueue(queue.Queue):
 
 
 def make_video_caps(
-        width: int, height: int, framerate: Framerate, format: str
+    width: int, height: int, framerate: Framerate, format: str
 ) -> Gst.Caps:
     """Return Gst.Caps built from arguments."""
     framerate = str(Fraction(framerate))
@@ -98,7 +98,9 @@ def gst_buffer_to_ndarray(buf: Gst.Buffer, caps: WrappedCaps) -> np.ndarray:
     """Return ndarray extracted from Gst.Buffer."""
     arr: np.ndarray
     with map_gst_buffer(buf, Gst.MapFlags.READ) as mapped:
-        arr = np.ndarray(mapped.size // caps.dtype.itemsize, buffer=mapped.data, dtype=caps.dtype)
+        arr = np.ndarray(
+            mapped.size // caps.dtype.itemsize, buffer=mapped.data, dtype=caps.dtype
+        )
         arr = arr.reshape(caps.shape)
 
     return arr.squeeze()

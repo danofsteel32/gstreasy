@@ -85,12 +85,12 @@ class AppSink:
             try:
                 caps = sample.get_caps()
                 caps_name = caps.get_structure(0).get_name()
-                if 'audio' in caps_name:
+                if "audio" in caps_name:
                     self._caps = AudioCaps.wrap(caps, buffer)
-                elif 'video' in caps_name:
+                elif "video" in caps_name:
                     self._caps = VideoCaps.wrap(caps, buffer)
                 else:
-                    raise ValueError('Unsupported Caps!')
+                    raise ValueError("Unsupported Caps!")
             except AttributeError:
                 return None
 

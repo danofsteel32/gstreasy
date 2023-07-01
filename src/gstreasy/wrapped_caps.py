@@ -1,7 +1,10 @@
 import attrs
 import math
 from typing import Union, List, Dict
-from abc import (ABC, abstractmethod, )
+from abc import (
+    ABC,
+    abstractmethod,
+)
 from functools import lru_cache
 
 import gi
@@ -13,9 +16,9 @@ gi.require_version("GstAudio", "1.0")
 
 from gi.repository import GLib, Gst, GstVideo, GstAudio  # noqa: E402
 
+
 @attrs.define(slots=True, frozen=True)
 class WrappedCaps(ABC):
-
     channels: int
     format: Union[GstVideo.VideoFormat, GstAudio.AudioFormat]
     dtype: np.dtype
@@ -47,11 +50,13 @@ class AudioCaps(WrappedCaps):
         channels = structure.get_value("channels")
         dtype = _get_audio_np_dtype(format)
         samples_per_channel = buf.get_size() // dtype.itemsize // channels
-        return cls(format=format,
-                   channels=channels,
-                   dtype=dtype,
-                   sampling_frequency=sampling_frequency,
-                   samples_per_channel=samples_per_channel)
+        return cls(
+            format=format,
+            channels=channels,
+            dtype=dtype,
+            sampling_frequency=sampling_frequency,
+            samples_per_channel=samples_per_channel,
+        )
 
     @property
     def shape(self):
@@ -74,7 +79,9 @@ class VideoCaps(WrappedCaps):
         format = GstVideo.VideoFormat.from_string(structure.get_value("format"))
         channels = get_num_channels(format)
         dtype = _get_video_np_dtype(format)
-        return cls(width=width, height=height, channels=channels, format=format, dtype=dtype)
+        return cls(
+            width=width, height=height, channels=channels, format=format, dtype=dtype
+        )
 
     @property
     def shape(self):

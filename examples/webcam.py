@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 # Configure pipeline command
 # videoconvert to RGB for numpy compatibility (webcam default usually YUY2)
-caps='video/x-raw, width=(int)640, height=(int)480, framerate=(fraction)30/1'
+caps = "video/x-raw, width=(int)640, height=(int)480, framerate=(fraction)30/1"
 device = int(os.getenv("WEBCAM", 0))
 cmd = f"""
     v4l2src device=/dev/video{device}
