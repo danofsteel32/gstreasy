@@ -1,13 +1,15 @@
 # gstreasy
 
 A re-imagining of [gstreamer-python](https://github.com/jackersson/gstreamer-python).
-I was going to just work on a fork of that repo but there was so much I thought
-should be changed. Some of the new features:
 
+Some of the new features:
+
+- Auto setup/teardown of main loop thread
 - Auto detect caps if in gst-launch command
 - Auto detect and configure `appsink` and `appsrc` if in command
 - Support for `appsink` and `appsrc` in same pipeline
-- Faster `Gst.Sample` -> `ndarray` by caching caps
+- Support for multiple sinks in the same pipeline
+- Faster `Gst.Sample` -> `np.ndarray` by caching caps
 
 
 ####  Example Usage

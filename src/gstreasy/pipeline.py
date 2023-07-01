@@ -189,7 +189,7 @@ class GstPipeline:
     an `appsrc`.
 
     The attributes `pipeline`, `bus`, and `elements` are uninitialized until
-    `startup` is called manually are upon entering the context manager.
+    `startup` is called manually or upon entering the context manager.
     """
 
     def __init__(
@@ -349,9 +349,9 @@ class GstPipeline:
 
     def startup(self):
         """Start the mainloop thread and pipeline."""
-        self._log.info("Starting pipeline")
+        self._log.info("Starting main loop thread")
         if self._main_loop_thread.is_alive():
-            self._log.warning("Pipeline already running")
+            self._log.warning("Main loop already running")
             return
 
         self._main_loop_thread.start()
@@ -368,6 +368,7 @@ class GstPipeline:
         self.bus.connect("message::eos", self.on_eos)
         self.bus.connect("message::warning", self.on_warning)
         self.bus.connect("message::element", self.on_element)
+        # STATE_CHANGED does not seem to work
         self.bus.connect("message::STATE_CHANGED", self.on_state_change)
 
         self.pipeline.set_state(Gst.State.READY)
@@ -379,15 +380,15 @@ class GstPipeline:
         self.pipeline.set_state(Gst.State.PAUSED)
         self._log.debug("Set pipeline to PAUSED")
 
-        self._log.debug("Setting up AppSink ...")
+        self._log.debug("Detecting and configuring AppSink if exists ...")
         self._appsink = self._setup_appsink()
         if self._appsink:
-            self._log.debug("AppSink successfully setup")
+            self._log.debug("AppSink successfully configured")
 
-        self._log.debug("Setting up AppSrc ...")
+        self._log.debug("Detecting and configuring AppSrc if exists...")
         self._appsrc = self._setup_appsrc()
         if self._appsrc:
-            self._log.debug("AppSrc successfully setup")
+            self._log.debug("AppSrc successfully configured")
 
         self.pipeline.set_state(Gst.State.PLAYING)
         # sample = self._appsink.sink.pull_sample()
@@ -421,16 +422,16 @@ class GstPipeline:
         """
         try:
             appsink_element = self.get_by_cls(GstApp.AppSink)[0]
-            self._log.debug("appsink element detected")
+            self._log.debug("AppSink element detected")
         except IndexError:
-            self._log.debug("No appsink element to setup")
+            self._log.debug("No AppSink element detected")
             return None
         return AppSink(appsink_element, self.leaky, self.qsize)
 
     def pop(self, timeout: float = 0.1) -> typing.Optional[GstBuffer]:
         """Return a `GstBuffer` from the `appsink` queue."""
         if not self.appsink:
-            self._log.warning("No appsink to pop from")
+            self._log.critical("No AppSink to pop buffer from")
             raise RuntimeError
 
         buf: typing.Optional[GstBuffer] = None
@@ -439,8 +440,9 @@ class GstPipeline:
                 buf = self.appsink.queue.get(timeout=timeout)
             except queue.Empty:
                 pass
+            # I think there's a reason I'm catching this here but don't remember
             except KeyboardInterrupt:
-                self._log.debug("I'm interrupted!")
+                self._log.critical("I'm interrupted!")
                 self._shutdown_pipeline()
         return buf
 
@@ -454,6 +456,9 @@ class GstPipeline:
     ) -> bool:
         """Set appsrc caps if not already set.
 
+        Note that changing the caps on a running pipeline is not supported!
+        Caps are either set before starting the pipeline or are auto detected.
+
         Args:
             width (int): a positive integer corresponding to buffer width
             height (int): a positive integer corresponding to buffer height
@@ -466,10 +471,10 @@ class GstPipeline:
             ValueError: If `Gst.Caps` cannot be created from arguments
         """
         if not self.appsrc:
-            self._log.warning("No appsrc element")
+            self._log.warning("No AppSrc element")
             return False
         if self.appsrc.caps:
-            self._log.warning("Caps already set")
+            self._log.warning("AppSrc Caps already set")
             return False
 
         self._log.debug("Building caps from args ...")
@@ -495,9 +500,9 @@ class GstPipeline:
     def push(self, data: np.ndarray):
         """Create a `Gst.Sample` from the `ndarray` and push it into the pipeline."""
         if not self.appsrc:
-            self._log.error("No appsrc to push to!")
+            self._log.critical("No AppSrc to push to!")
             self.shutdown()
-            return
+            raise RuntimeError
         self.appsrc.push(data)
 
     def on_error(self, bus: Gst.Bus, msg: Gst.Message):
