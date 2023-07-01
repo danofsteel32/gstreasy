@@ -93,9 +93,9 @@ def test_video_appsrc_and_sink():
         "appsink emit-signals=true"
     )
     with GstPipeline(cmd) as pipeline:
-        pipeline.set_appsrc_caps(width=320, height=240, framerate=10, format="GRAY8")
+        pipeline.set_appsrc_video_caps(width=320, height=240, framerate=10, format="GRAY8")
         while pipeline:
-            pipeline.push(rand_array(channels=3))
+            pipeline.push(rand_array(channels=1))
             buffer = pipeline.pop()
             if buffer:
                 assert buffer.data.shape == (240, 320)
