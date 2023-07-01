@@ -1,10 +1,8 @@
 from pathlib import Path
 
 import numpy as np
-import pytest
 
-from gstreasy import GstPipeline
-import gstreasy.utils as utils
+from src.gstreasy import GstPipeline
 
 
 def rand_array(channels: int = 3):
