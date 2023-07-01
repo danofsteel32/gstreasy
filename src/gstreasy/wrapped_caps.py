@@ -13,7 +13,6 @@ gi.require_version("GstAudio", "1.0")
 
 from gi.repository import GLib, Gst, GstVideo, GstAudio  # noqa: E402
 
-
 @attrs.define(slots=True, frozen=True)
 class WrappedCaps(ABC):
 
@@ -23,7 +22,7 @@ class WrappedCaps(ABC):
 
     @classmethod
     @abstractmethod
-    def wrap(cls, caps: Gst.Caps):
+    def wrap(cls, caps: Gst.Caps, buf: Gst.Buffer):
         pass
 
     @property
@@ -36,26 +35,28 @@ class WrappedCaps(ABC):
 class AudioCaps(WrappedCaps):
     """Wrap `Gst.Caps` to simplify pushing/pulling samples."""
 
-    samples_per_buffer: int
+    sampling_frequency: int
+    samples_per_channel: int
 
     @classmethod
-    def wrap(cls, caps: Gst.Caps):
+    def wrap(cls, caps: Gst.Caps, buf: Gst.Buffer):
         """Transform `Gst.Caps` into `WrappedCaps`."""
         structure = caps.get_structure(0)
-        rate = structure.get_value("rate")
+        sampling_frequency = structure.get_value("rate")
         format = GstAudio.AudioFormat.from_string(structure.get_value("format"))
         channels = structure.get_value("channels")
         dtype = _get_audio_np_dtype(format)
-        samples_per_buffer = int(rate * 0.1)
+        samples_per_channel = buf.get_size() // dtype.itemsize // channels
         return cls(format=format,
                    channels=channels,
                    dtype=dtype,
-                   samples_per_buffer=samples_per_buffer)
+                   sampling_frequency=sampling_frequency,
+                   samples_per_channel=samples_per_channel)
 
     @property
     def shape(self):
         """Return shape of np.ndarray required to hold buffer with these Caps."""
-        return [self.samples_per_buffer, self.channels]
+        return [self.samples_per_channel, self.channels]
 
 
 @attrs.define(slots=True, frozen=True)
@@ -64,18 +65,16 @@ class VideoCaps(WrappedCaps):
 
     width: int
     height: int
-    bpp: int
 
     @classmethod
-    def wrap(cls, caps: Gst.Caps):
+    def wrap(cls, caps: Gst.Caps, buf: Gst.Buffer):
         """Transform `Gst.Caps` into `WrappedCaps`."""
         structure = caps.get_structure(0)
         width, height = structure.get_value("width"), structure.get_value("height")
         format = GstVideo.VideoFormat.from_string(structure.get_value("format"))
         channels = get_num_channels(format)
         dtype = _get_video_np_dtype(format)
-        bpp = GstVideo.VideoFormat.get_info(format).bits // BITS_PER_BYTE
-        return cls(width=width, height=height, channels=channels, format=format, dtype=dtype, bpp=bpp)
+        return cls(width=width, height=height, channels=channels, format=format, dtype=dtype)
 
     @property
     def shape(self):
@@ -86,6 +85,7 @@ class VideoCaps(WrappedCaps):
 def _get_audio_np_dtype(fmt: GstAudio.AudioFormat) -> np.dtype:
     dtypes = {
         8: np.dtype(np.int8),
+        16: np.dtype(np.int16),
     }
     format_info = GstAudio.AudioFormat.get_info(fmt)
     return dtypes.get(format_info.depth, np.dtype(np.uint8))
@@ -93,7 +93,8 @@ def _get_audio_np_dtype(fmt: GstAudio.AudioFormat) -> np.dtype:
 
 def _get_video_np_dtype(fmt: GstVideo.VideoFormat) -> np.dtype:
     dtypes = {
-        16: np.dtype(np.int16),
+        8: np.dtype(np.uint8),
+        16: np.dtype(np.uint16),
     }
     format_info = GstVideo.VideoFormat.get_info(fmt)
     return dtypes.get(format_info.bits, np.dtype(np.uint8))
