@@ -81,7 +81,7 @@ class AppSink:
 
         # Extract the width and height info from the sample's caps
         if not self._caps:
-            print("Getting caps from first sample")
+            self._log.debug("Getting caps from first sample")
             try:
                 caps = sample.get_caps()
                 caps_name = caps.get_structure(0).get_name()
