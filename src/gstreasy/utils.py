@@ -13,9 +13,7 @@ from .wrapped_caps import WrappedCaps
 gi.require_version("Gst", "1.0")
 gi.require_version("GstVideo", "1.0")
 
-from gi.repository import GLib, Gst, GstVideo  # noqa: E402
-
-BITS_PER_BYTE = 8
+from gi.repository import GLib, Gst, GstVideo, GstAudio  # noqa: E402
 
 Framerate = typing.Union[int, Fraction, str]
 
@@ -59,7 +57,7 @@ class LeakyQueue(queue.Queue):
         super().put(item, block, timeout)
 
 
-def make_caps(
+def make_video_caps(
         width: int, height: int, framerate: Framerate, format: str
 ) -> Gst.Caps:
     """Return Gst.Caps built from arguments."""
@@ -100,7 +98,7 @@ def gst_buffer_to_ndarray(buf: Gst.Buffer, caps: WrappedCaps) -> np.ndarray:
     """Return ndarray extracted from Gst.Buffer."""
     arr: np.ndarray
     with map_gst_buffer(buf, Gst.MapFlags.READ) as mapped:
-        arr = np.ndarray(caps.shape, buffer=mapped.data, dtype=caps.dtype)
-    if caps.channels > 0:
-        return arr.squeeze()
-    return arr
+        arr = np.ndarray(mapped.size // caps.dtype.itemsize, buffer=mapped.data, dtype=caps.dtype)
+        arr = arr.reshape(caps.shape)
+
+    return arr.squeeze()
