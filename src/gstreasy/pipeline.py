@@ -1,7 +1,6 @@
 """This module provides the GstPipeline class."""
 
 import logging
-import pdb
 import queue
 import sys
 import threading

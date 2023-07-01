@@ -1,6 +1,6 @@
 import attrs
 import math
-from typing import Union, Tuple, List, Dict
+from typing import Union, List, Dict
 from abc import (ABC, abstractmethod, )
 from functools import lru_cache
 
