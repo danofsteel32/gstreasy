@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gstreasy"
-version = "0.2.0"
+version = "0.3.0"
 description = "Makes using GStreamer in python easy!"
 readme = "README.md"
 authors = [{name = "Dan Davis", email = "dan@dandavis.dev"}]
@@ -34,7 +34,8 @@ dev = [
     "flake8-docstrings",
     "mypy",
     "pytest",
-    "tox"
+    "tox",
+    "build",
 ]
 doc = ["pdoc"]
 
