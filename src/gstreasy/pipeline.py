@@ -12,7 +12,7 @@ import gi
 import numpy as np
 
 from .utils import GstBuffer, LeakyQueue, gst_buffer_to_ndarray, make_video_caps
-from .wrapped_caps import WrappedCaps, AudioCaps, VideoCaps
+from .wrapped_caps import AudioCaps, VideoCaps, WrappedCaps
 
 gi.require_version("Gst", "1.0")
 gi.require_version("GstApp", "1.0")
@@ -341,10 +341,13 @@ class GstPipeline:
             timeout: (int, optional): Timeout in seconds to wait for running
                 threads to finish/return. Defaults to 1.
         """
+        # Fix so don't print shutdown message twice on KeyboardInterrupt
+        if self.state == Gst.State.NULL:
+            return
         self._log.info("Shutdown requested ...")
         self._shutdown_pipeline(eos, timeout)
         self._shutdown_main_loop()
-        self._log.info("Shutdown Success")
+        self._log.info("Shutdown success")
 
     def startup(self):
         """Start the mainloop thread and pipeline."""
@@ -431,6 +434,7 @@ class GstPipeline:
         """Return a `GstBuffer` from the `appsink` queue."""
         if not self.appsink:
             self._log.critical("No AppSink to pop buffer from")
+            self.shutdown()
             raise RuntimeError
 
         buf: typing.Optional[GstBuffer] = None
@@ -442,7 +446,7 @@ class GstPipeline:
             # I think there's a reason I'm catching this here but don't remember
             except KeyboardInterrupt:
                 self._log.critical("I'm interrupted!")
-                self._shutdown_pipeline()
+                self.shutdown()
         return buf
 
     def set_appsrc_video_caps(
@@ -499,10 +503,14 @@ class GstPipeline:
     def push(self, data: np.ndarray):
         """Create a `Gst.Sample` from the `ndarray` and push it into the pipeline."""
         if not self.appsrc:
-            self._log.critical("No AppSrc to push to!")
+            self._log.critical("No AppSrc to push buffer to!")
             self.shutdown()
             raise RuntimeError
-        self.appsrc.push(data)
+        try:
+            self.appsrc.push(data)
+        except KeyboardInterrupt:
+            self._log.critical("I'm interrupted!")
+            self.shutdown()
 
     def on_error(self, bus: Gst.Bus, msg: Gst.Message):
         """Log `ERROR` message and shutdown."""

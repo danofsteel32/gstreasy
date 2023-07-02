@@ -1,4 +1,7 @@
-"""An example of using the gstreasy library.
+"""An example of pushing numpy arrays to a videosink with the gstreasy library.
+
+This program was originally used to create a fake video feed of an automotive
+stamping transfer press while we were waiting on real cameras to arrive.
 
 The press cycle generator is silly but I had it lying around from
 a previous project and wanted something more interesting than using
@@ -14,7 +17,7 @@ import numpy as np
 from gstreasy import GstPipeline
 
 # Configure logging
-fmt = "%(levelname)-6.6s | %(name)-20s | %(asctime)s.%(msecs)03d | %(threadName)s | %(message)s"
+fmt = "%(levelname)-6.6s | %(name)-20s | %(asctime)s.%(msecs)03d | %(threadName)s | %(message)s"  # noqa: E501
 dmt_fmt = "%d.%m %H:%M:%S"
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=dmt_fmt))
@@ -149,7 +152,9 @@ if __name__ == "__main__":
 
     cmd = "appsrc emit-signals=true is-live=true ! videoconvert ! autovideosink"
     with GstPipeline(cmd) as pipeline:
-        pipeline.set_appsrc_caps(width=width, height=height, framerate=30, format="RGB")
+        pipeline.set_appsrc_video_caps(
+            width=width, height=height, framerate=30, format="RGB"
+        )
         while pipeline:
             frame = next(frame_gen)[0]
             pipeline.push(frame)
