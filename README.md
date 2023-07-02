@@ -61,7 +61,7 @@ with GstPipeline(tee_cmd) as pipeline:
 All dev tasks can be handled with the `run.sh` script but it just wraps standard tools if you can't/don't want use it.
 
 - `python -m pip install -e .[dev,doc]` to install deps
-- `tox` to run tests for py3.7 and py3.10.
+- `tox` to run tests for py3.7, py3.10, and py3.11.
 - `flake8` and `mypy` for linting
 - `pdoc -d google src/gstreasy` for online docs
 
