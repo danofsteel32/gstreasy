@@ -64,3 +64,12 @@ All dev tasks can be handled with the `run.sh` script but it just wraps standard
 - `tox` to run tests for py3.7 and py3.10.
 - `flake8` and `mypy` for linting
 - `pdoc -d google src/gstreasy` for online docs
+
+To help debugging, you can breakpoint inside functions that run on a separate thread,
+if you insert the following lines just before your breakpoint. Tested on PyCharm but should work with most IDEs.
+Please remove them before opening your pull request.
+
+```python
+import pydevd
+pydevd.settrace(suspend=False, trace_only_current_thread=True)
+```

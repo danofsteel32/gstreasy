@@ -11,10 +11,12 @@ from fractions import Fraction
 import gi
 import numpy as np
 
-from .utils import GstBuffer, LeakyQueue, WrappedCaps, gst_buffer_to_ndarray, make_caps
+from .utils import GstBuffer, LeakyQueue, gst_buffer_to_ndarray, make_video_caps
+from .wrapped_caps import WrappedCaps, AudioCaps, VideoCaps
 
 gi.require_version("Gst", "1.0")
 gi.require_version("GstApp", "1.0")
+gi.require_version("GstAudio", "1.0")
 gi.require_version("GstVideo", "1.0")
 from gi.repository import GLib, GObject, Gst, GstApp  # noqa: E402
 
@@ -81,7 +83,14 @@ class AppSink:
         if not self._caps:
             self._log.debug("Getting caps from first sample")
             try:
-                self._caps = WrappedCaps.wrap(sample.get_caps())
+                caps = sample.get_caps()
+                caps_name = caps.get_structure(0).get_name()
+                if "audio" in caps_name:
+                    self._caps = AudioCaps.wrap(caps, buffer)
+                elif "video" in caps_name:
+                    self._caps = VideoCaps.wrap(caps, buffer)
+                else:
+                    raise ValueError("Unsupported Caps!")
             except AttributeError:
                 return None
 
@@ -381,6 +390,7 @@ class GstPipeline:
             self._log.debug("AppSrc successfully configured")
 
         self.pipeline.set_state(Gst.State.PLAYING)
+        # sample = self._appsink.sink.pull_sample()
         self._log.debug("Set pipeline to PLAYING")
 
     @property
@@ -435,7 +445,7 @@ class GstPipeline:
                 self._shutdown_pipeline()
         return buf
 
-    def set_appsrc_caps(
+    def set_appsrc_video_caps(
         self,
         *,
         width: int,
@@ -467,7 +477,7 @@ class GstPipeline:
             return False
 
         self._log.debug("Building caps from args ...")
-        self.appsrc.caps = make_caps(width, height, framerate, format)
+        self.appsrc.caps = make_video_caps(width, height, framerate, format)
         self._log.debug("Caps successfully set")
         return True
 

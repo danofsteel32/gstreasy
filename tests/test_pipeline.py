@@ -1,10 +1,8 @@
 from pathlib import Path
 
 import numpy as np
-import pytest
 
-from gstreasy import GstPipeline
-import gstreasy.utils as utils
+from src.gstreasy import GstPipeline
 
 
 def rand_array(channels: int = 3):
@@ -17,7 +15,7 @@ def test_simple():
         pass
 
 
-def test_appsink_buffers():
+def test_video_appsink_buffers():
     num_buffers, count = 10, 0
     cmd = f"videotestsrc num-buffers={num_buffers} ! " "appsink emit-signals=true"
     with GstPipeline(cmd) as pipeline:
@@ -29,18 +27,29 @@ def test_appsink_buffers():
     assert count == num_buffers
 
 
-def test_tee():
+def test_audio_appsink_buffers():
     num_buffers, count = 10, 0
-    out = Path("/tmp/recording.avi")
-    if out.exists():
-        out.unlink()
+    cmd = f"audiotestsrc num-buffers={num_buffers} ! " "appsink emit-signals=true"
+    with GstPipeline(cmd) as pipeline:
+        while pipeline:
+            buffer = pipeline.pop()
+            if buffer:
+                count += 1
+                assert isinstance(buffer.data, np.ndarray)
+    assert count == num_buffers
+
+
+def test_tee(tmp_path):
+    num_buffers, count = 10, 0
+    file_path = Path(tmp_path / "test_tee_recording.avi")
+    print(file_path)
     cmd = f"""
         videotestsrc num-buffers={num_buffers} ! tee name=t
         t. ! queue ! video/x-raw,format=RGB,framerate=60/1
            ! appsink emit-signals=true
         t. ! queue ! video/x-raw,format=RGB,framerate=60/1
            ! jpegenc ! avimux
-           ! filesink location={str(out)}
+           ! filesink location={file_path}
     """
     count = 0
     with GstPipeline(cmd) as pipeline:
@@ -50,11 +59,9 @@ def test_tee():
                 count += 1
     # Did we get at least 90% of the buffers?
     assert count == num_buffers
-    if out.exists():
-        out.unlink()
 
 
-def test_appsrc_with_caps():
+def test_appsrc_with_video_caps():
     num_buffers = 10
     caps = "video/x-raw,width=320,height=240,framerate=60/1,format=RGB"
     cmd = f"appsrc caps={caps} emit-signals=true num-buffers={num_buffers} ! fakesink"
@@ -63,7 +70,7 @@ def test_appsrc_with_caps():
             pipeline.push(rand_array())
 
 
-def test_appsrc_no_caps():
+def test_video_appsrc_no_caps():
     num_buffers = 10
 
     cmd = (
@@ -72,12 +79,14 @@ def test_appsrc_no_caps():
     )
 
     with GstPipeline(cmd) as pipeline:
-        pipeline.set_appsrc_caps(width=320, height=240, framerate=10, format="GRAY8")
+        pipeline.set_appsrc_video_caps(
+            width=320, height=240, framerate=10, format="GRAY8"
+        )
         while pipeline:
             pipeline.push(rand_array(channels=1))
 
 
-def test_appsrc_and_sink():
+def test_video_appsrc_and_sink():
     num_buffers, count = 10, 0
 
     cmd = (
@@ -85,9 +94,11 @@ def test_appsrc_and_sink():
         "appsink emit-signals=true"
     )
     with GstPipeline(cmd) as pipeline:
-        pipeline.set_appsrc_caps(width=320, height=240, framerate=10, format="GRAY8")
+        pipeline.set_appsrc_video_caps(
+            width=320, height=240, framerate=10, format="GRAY8"
+        )
         while pipeline:
-            pipeline.push(rand_array(channels=3))
+            pipeline.push(rand_array(channels=1))
             buffer = pipeline.pop()
             if buffer:
                 assert buffer.data.shape == (240, 320)

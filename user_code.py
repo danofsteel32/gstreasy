@@ -69,7 +69,6 @@ def press_cycle_gen(
         return strip
 
     def press_image(frame: int, crash: bool = False):
-
         length = w - (w // 4)
         width = length // 4
         press_rect = np.ones((width, length), dtype=np.uint8)
