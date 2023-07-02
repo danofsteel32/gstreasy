@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.gstreasy import GstPipeline
+from gstreasy import GstPipeline
 
 
 def rand_array(channels: int = 3):
