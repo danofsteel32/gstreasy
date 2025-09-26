@@ -21,7 +21,7 @@ fmt = "%(levelname)-6.6s | %(name)-20s | %(asctime)s.%(msecs)03d | %(threadName)
 dmt_fmt = "%d.%m %H:%M:%S"
 log_handler = logging.StreamHandler()
 log_handler.setFormatter(logging.Formatter(fmt=fmt, datefmt=dmt_fmt))
-logging.basicConfig(level=logging.DEBUG, handlers=[log_handler])
+logging.basicConfig(level=logging.INFO, handlers=[log_handler])
 log = logging.getLogger(__name__)
 
 
@@ -83,8 +83,8 @@ def press_cycle_gen(
             strip = np.ones((width // 4, length, shape[-1]), dtype=np.uint8)
             strip_y = h // 2 - width // 8
 
-        top_y = h // 4 - width // 2
-        bot_y = (h - h // 4) - width // 2
+        top_y = h // 6 - width // 2
+        bot_y = (h - h // 6) - width // 2
         center_x = (w - length) // 2
 
         move_dist = bot_y - h // 2
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     width, height, channels = 320, 240, 3
     frame_gen = press_cycle_gen(shape=(height, width, channels), crash_cycle=4)
 
-    cmd = "appsrc emit-signals=true is-live=true ! videoconvert ! autovideosink"
+    cmd = "appsrc emit-signals=true is-live=true ! videoconvert ! queue ! autovideosink"
     with GstPipeline(cmd) as pipeline:
         pipeline.set_appsrc_video_caps(
             width=width, height=height, framerate=30, format="RGB"
