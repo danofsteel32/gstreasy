@@ -111,7 +111,7 @@ def _get_video_np_dtype(fmt: GstVideo.VideoFormat) -> np.dtype:
 def _format_channels() -> Dict[GstVideo.VideoFormat, int]:
     all_formats = [
         GstVideo.VideoFormat.from_string(f.strip())
-        for f in GstVideo.VIDEO_FORMATS_ALL.strip("{ }").split(",")
+        for f in GstVideo.VIDEO_FORMATS_ALL_STR.split(",")
     ]
     format_channels = {}
     for fmt in all_formats:
